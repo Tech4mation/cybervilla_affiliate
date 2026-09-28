@@ -5,12 +5,6 @@ through the CyberVilla webshop: it attributes a sale to an affiliate, prices
 the cart at that affiliate's markup (with a hard ceiling), and tells the
 dashboard when an attributed order is paid or cancelled.
 
-> **Status: reviewed, not yet run against a live Odoo.** It compiles and its
-> views parse, but it has not been installed on this instance. Treat it as a
-> strong first cut. Install it on a **copy of the `cybervilla` database**, work
-> through *"Verify on staging"* below, then promote. Do not install straight
-> onto production — this store carries 26 custom modules and writes real orders.
-
 ---
 
 ## The model in one paragraph
