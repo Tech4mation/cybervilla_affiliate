@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- The markup ceiling. An admin can change this in Settings; it starts at
+         10% because that is the rule the affiliate programme was built around. -->
+    <record id="param_max_markup" model="ir.config_parameter">
+        <field name="key">cybervilla_affiliate.max_markup_percent</field>
+        <field name="value">10</field>
+    </record>
+
+</odoo>

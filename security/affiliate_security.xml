@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="module_category_cybervilla_affiliate" model="ir.module.category">
+        <field name="name">CyberVilla Affiliate</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Who may see and manage the affiliate registry, links and payouts feed
+         inside Odoo. The integration user does not need this; it works through
+         the Sales rights it already has. -->
+    <record id="group_cybervilla_affiliate_manager" model="res.groups">
+        <field name="name">Affiliate Manager</field>
+        <field name="category_id" ref="module_category_cybervilla_affiliate"/>
+        <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+
+</odoo>

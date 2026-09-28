@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Show the attribution on the order, so anyone looking at a sale can see
+         which affiliate it belongs to and what they earned on it. -->
+    <record id="view_order_form_affiliate" model="ir.ui.view">
+        <field name="name">sale.order.form.affiliate</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <field name="client_order_ref" position="after">
+                <field name="affiliate_link_id" invisible="1"/>
+                <field name="affiliate_code" readonly="1"
+                       attrs="{'invisible': [('affiliate_code', '=', False)]}"/>
+                <field name="affiliate_id" readonly="1"
+                       attrs="{'invisible': [('affiliate_id', '=', False)]}"/>
+                <field name="affiliate_markup_percent" readonly="1"
+                       attrs="{'invisible': [('affiliate_link_id', '=', False)]}"/>
+                <field name="affiliate_earning" readonly="1"
+                       attrs="{'invisible': [('affiliate_link_id', '=', False)]}"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- A quick filter and grouping for the affiliate channel. Appended to the
+         end of the standard sales search view so it does not depend on any one
+         built-in filter still being named the same. -->
+    <record id="view_sales_order_filter_affiliate" model="ir.ui.view">
+        <field name="name">sale.order.search.affiliate</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter string="Affiliate sales" name="affiliate_only"
+                        domain="[('affiliate_link_id', '!=', False)]"/>
+                <filter string="Affiliate" name="group_affiliate"
+                        context="{'group_by': 'affiliate_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

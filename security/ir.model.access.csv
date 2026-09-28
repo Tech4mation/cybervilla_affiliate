@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_affiliate_salesman,affiliate salesman,model_cybervilla_affiliate,sales_team.group_sale_salesman,1,1,1,0
+access_affiliate_manager,affiliate manager,model_cybervilla_affiliate,group_cybervilla_affiliate_manager,1,1,1,1
+access_affiliate_link_salesman,affiliate link salesman,model_cybervilla_affiliate_link,sales_team.group_sale_salesman,1,1,1,0
+access_affiliate_link_manager,affiliate link manager,model_cybervilla_affiliate_link,group_cybervilla_affiliate_manager,1,1,1,1
+access_affiliate_click_salesman,affiliate click salesman,model_cybervilla_affiliate_click,sales_team.group_sale_salesman,1,0,0,0
+access_affiliate_click_manager,affiliate click manager,model_cybervilla_affiliate_click,group_cybervilla_affiliate_manager,1,1,1,1
+access_affiliate_webhook_manager,affiliate webhook manager,model_cybervilla_affiliate_webhook,group_cybervilla_affiliate_manager,1,1,1,1

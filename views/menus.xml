@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_cybervilla_affiliate_root"
+              name="Affiliates"
+              groups="group_cybervilla_affiliate_manager"
+              sequence="90"/>
+
+    <menuitem id="menu_affiliate_links"
+              name="Links"
+              parent="menu_cybervilla_affiliate_root"
+              action="action_affiliate_link"
+              sequence="10"/>
+
+    <menuitem id="menu_affiliates"
+              name="Affiliates"
+              parent="menu_cybervilla_affiliate_root"
+              action="action_affiliate"
+              sequence="20"/>
+
+    <menuitem id="menu_affiliate_settings"
+              name="Settings"
+              parent="menu_cybervilla_affiliate_root"
+              action="action_cybervilla_affiliate_config"
+              groups="base.group_system"
+              sequence="90"/>
+
+</odoo>

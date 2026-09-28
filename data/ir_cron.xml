@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Delivers queued paid-order notifications to the affiliate backend, and
+         retries the ones that did not get through. Runs every few minutes; a
+         notification that has already been sent is skipped, so a tight interval
+         is cheap. -->
+    <record id="cron_dispatch_webhooks" model="ir.cron">
+        <field name="name">CyberVilla Affiliate: deliver paid-order notifications</field>
+        <field name="model_id" ref="model_cybervilla_affiliate_webhook"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_dispatch()</field>
+        <field name="interval_number">3</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+    </record>
+
+</odoo>

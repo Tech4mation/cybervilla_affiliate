@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.form.cybervilla.affiliate</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="CyberVilla Affiliate" name="cybervilla_affiliate"
+                     logo="/base/static/img/icon.png">
+                    <block title="Affiliate backend"
+                           name="cybervilla_affiliate_backend">
+                        <setting string="Backend URL"
+                                 help="Where paid-order notifications are sent.">
+                            <field name="cybervilla_backend_url"/>
+                        </setting>
+                        <setting string="Signing secret"
+                                 help="Shared with the backend; signs every notification.">
+                            <field name="cybervilla_webhook_secret" password="True"/>
+                        </setting>
+                    </block>
+                    <block title="Pricing" name="cybervilla_affiliate_pricing">
+                        <setting string="Markup ceiling"
+                                 help="The most any affiliate may add to a price.">
+                            <field name="cybervilla_max_markup_percent"/> %
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_cybervilla_affiliate_config" model="ir.actions.act_window">
+        <field name="name">Affiliate Settings</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'cybervilla_affiliate'}</field>
+    </record>
+
+</odoo>
