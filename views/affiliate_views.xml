@@ -41,6 +41,7 @@
                                     <field name="code"/>
                                     <field name="label"/>
                                     <field name="markup_percent"/>
+                                    <field name="product_tmpl_id"/>
                                     <field name="click_count"/>
                                     <field name="active"/>
                                 </tree>

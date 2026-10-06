@@ -20,10 +20,10 @@ WEBSITE_PRICELIST_KEY = "website_sale_current_pl"
 def _apply_affiliate_pricelist(link):
     """Put this visitor's session on the link's pricelist.
 
-    Odoo only keeps the value if the pricelist is usable on this website, which
-    the module's own pricelists are (they are created against the website, with
-    no company or country restriction). A failure here must never break the
-    page the visitor asked for — they simply shop at the normal price.
+    Odoo keeps the value only if the pricelist is usable on this website, which
+    the module's own pricelists are (created against the website, with no
+    company or country restriction). A failure here must never break the page
+    the visitor asked for — they simply shop at the normal price.
     """
     try:
         if request and link and link.pricelist_id:

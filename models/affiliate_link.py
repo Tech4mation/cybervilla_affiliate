@@ -22,9 +22,10 @@ class CybervillaAffiliateLink(models.Model):
     and order code do the pricing, and there is no custom price maths to fight
     with website_sale.
 
-    A link has no notion of a single product — it always prices the whole
-    catalogue. A visitor who arrives on any affiliate's link buys everything
-    at that link's markup, which is what the dashboard tells affiliates.
+    The markup travels with the link, not the product — a visitor who arrives
+    on an iPhone link and buys a charger still buys it at the link's markup.
+    That is why the rule is global rather than tied to one product, and it
+    matches what the dashboard tells affiliates.
     """
 
     _name = "cybervilla.affiliate.link"
@@ -39,11 +40,17 @@ class CybervillaAffiliateLink(models.Model):
     )
     backend_ref = fields.Char(string="Dashboard link ID", index=True, copy=False)
 
-    # Held as a percentage because that is how it is capped.
+    # Held as a percentage because a link's markup is capped as a percentage,
+    # and because the same number prices a storewide link and a product link.
     markup_percent = fields.Float(
         string="Markup %", required=True, default=0.0,
         help="Added to every product's price for a buyer on this link. "
              "Cannot exceed the store's markup ceiling.",
+    )
+    # Product links exist to point the landing page at one product; the markup
+    # still applies storewide. Optional.
+    product_tmpl_id = fields.Many2one(
+        "product.template", string="Featured product", ondelete="set null",
     )
 
     pricelist_id = fields.Many2one(

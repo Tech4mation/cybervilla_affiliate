@@ -10,6 +10,7 @@
                 <field name="affiliate_id"/>
                 <field name="label"/>
                 <field name="markup_percent"/>
+                <field name="product_tmpl_id"/>
                 <field name="click_count"/>
                 <field name="active"/>
             </tree>
@@ -34,6 +35,7 @@
                         </group>
                         <group>
                             <field name="markup_percent"/>
+                            <field name="product_tmpl_id"/>
                             <field name="pricelist_id" readonly="1"/>
                             <field name="active"/>
                         </group>

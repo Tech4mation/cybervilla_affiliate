@@ -42,7 +42,11 @@ class CybervillaAffiliateWebhook(models.Model):
 
     @api.model
     def _enqueue(self, event, payload, sale_order=None):
-        return self.create({
+        # sudo: the queue row is bookkeeping, not something the person
+        # confirming the order needs rights over. Without this, a salesperson
+        # confirming an attributed order gets an AccessError and the
+        # confirmation itself fails.
+        return self.sudo().create({
             "event": event,
             "payload": json.dumps(payload, default=str),
             "sale_order_id": sale_order.id if sale_order else False,
