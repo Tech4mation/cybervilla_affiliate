@@ -1,4 +1,8 @@
+import logging
+
 from odoo import api, fields, models
+
+_logger = logging.getLogger(__name__)
 
 
 class SaleOrder(models.Model):
@@ -91,7 +95,46 @@ class SaleOrder(models.Model):
             "affiliate_earning": self.affiliate_earning,
             "customer_email": self.partner_id.email or "",
             "confirmed_at": fields.Datetime.to_string(self.date_order),
+            "lines": self._affiliate_lines(),
         }
+
+    def _affiliate_lines(self):
+        """What was actually bought, for the affiliate backend.
+
+        The backend needs this to pay a per-product commission; until now it
+        was told only the order total, so it could not tell a phone from a
+        screen protector.
+
+        Everything is inside a try/except on purpose. This runs while an
+        order is being confirmed, and an order that cannot be confirmed
+        because a *report* failed would be a far worse fault than a report
+        that is missing. On any trouble we log and send nothing, and the
+        backend treats an absent list as "not reported" rather than "nothing
+        was bought".
+        """
+        lines = []
+        try:
+            for line in self.order_line:
+                # Section and note rows carry no product.
+                if line.display_type:
+                    continue
+                product = line.product_id
+                if not product:
+                    continue
+                lines.append({
+                    "product_id": product.id,
+                    "product_tmpl_id": product.product_tmpl_id.id,
+                    "name": line.name or product.display_name or "",
+                    "quantity": line.product_uom_qty,
+                    "price_unit": line.price_unit,
+                    "price_subtotal": line.price_subtotal,
+                })
+        except Exception:
+            _logger.exception(
+                "Could not build affiliate order lines for %s; sending the order "
+                "without them", self.name)
+            return []
+        return lines
 
     def _notify_affiliate_backend(self):
         Webhook = self.env["cybervilla.affiliate.webhook"]

@@ -2,6 +2,7 @@ import hashlib
 from datetime import datetime, time
 
 from odoo import fields, http
+from odoo.addons.http_routing.models.ir_http import slug
 from odoo.http import request
 
 from ..models.ir_http import SESSION_KEY, _apply_affiliate_pricelist
@@ -64,4 +65,7 @@ class CybervillaAffiliateController(http.Controller):
         except Exception:  # noqa: BLE001 — a click we failed to log is not worth a broken link
             request.env.cr.rollback()
 
+        # A link that names a product lands on it; otherwise the shop front.
+        if link.product_tmpl_id:
+            return request.redirect("/shop/%s" % slug(link.product_tmpl_id))
         return request.redirect("/shop")

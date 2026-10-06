@@ -98,6 +98,9 @@ result = models.execute_kw(DB, uid, KEY, "cybervilla.affiliate.link", "upsert_fr
     "label": "iPhone 15 Pro Max — Instagram bio",
     "affiliate_id": aff_id,
     "markup_percent": 0.5,
+    # Optional: the product the link lands on (product.template id). It does
+    # not narrow the markup — that always applies to the whole basket.
+    # "product_tmpl_id": 1234,
 }])
 # result -> {"link_id":..,"affiliate_id":..,"pricelist_id":..,"markup_percent":0.5}
 ```
