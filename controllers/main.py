@@ -2,10 +2,9 @@ import hashlib
 from datetime import datetime, time
 
 from odoo import fields, http
-from odoo.addons.http_routing.models.ir_http import slug
 from odoo.http import request
 
-from ..models.ir_http import SESSION_KEY, _apply_affiliate_pricelist
+from ..models.ir_http import remember_link
 
 
 class CybervillaAffiliateController(http.Controller):
@@ -50,7 +49,7 @@ class CybervillaAffiliateController(http.Controller):
             })
 
     @http.route(["/r/<string:code>"], type="http", auth="public",
-                website=True, sitemap=False, csrf=False)
+                website=True, sitemap=False, csrf=False, readonly=False)
     def affiliate_redirect(self, code, **kwargs):
         link = request.env["cybervilla.affiliate.link"].sudo()._resolve(code)
         if not link:
@@ -58,14 +57,17 @@ class CybervillaAffiliateController(http.Controller):
             # shop as an ordinary visitor, earning nobody anything.
             return request.redirect("/shop")
 
-        request.session[SESSION_KEY] = link.code
-        _apply_affiliate_pricelist(link)
+        remember_link(link)
         try:
-            self._record_click(link)
-        except Exception:  # noqa: BLE001 — a click we failed to log is not worth a broken link
-            request.env.cr.rollback()
+            # A savepoint, not a rollback: a click we failed to log is not
+            # worth a broken link, and must not undo anything else.
+            with request.env.cr.savepoint():
+                self._record_click(link)
+        except Exception:  # noqa: BLE001
+            pass
 
         # A link that names a product lands on it; otherwise the shop front.
-        if link.product_tmpl_id:
-            return request.redirect("/shop/%s" % slug(link.product_tmpl_id))
+        product = link.product_tmpl_id
+        if product and product.website_url:
+            return request.redirect(product.website_url)
         return request.redirect("/shop")

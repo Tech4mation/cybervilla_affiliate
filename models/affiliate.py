@@ -32,10 +32,12 @@ class CybervillaAffiliate(models.Model):
     link_count = fields.Integer(compute="_compute_counts")
     order_count = fields.Integer(compute="_compute_counts")
 
-    _sql_constraints = [
-        ("backend_ref_uniq", "unique(backend_ref)",
-         "An affiliate with this dashboard id already exists."),
-    ]
+    # Odoo 19 no longer reads `_sql_constraints` — it logs a warning and
+    # creates nothing, so the rule would silently stop existing.
+    _backend_ref_uniq = models.Constraint(
+        "UNIQUE(backend_ref)",
+        "An affiliate with this dashboard id already exists.",
+    )
 
     def _compute_counts(self):
         for affiliate in self:

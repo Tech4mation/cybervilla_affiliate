@@ -1,6 +1,6 @@
 # CyberVilla Affiliate (`cybervilla_affiliate`)
 
-An Odoo **16.0** module that lets the CyberVilla affiliate dashboard sell
+An Odoo **19.0** module that lets the CyberVilla affiliate dashboard sell
 through the CyberVilla webshop: it attributes a sale to an affiliate, prices
 the cart at that affiliate's markup (with a hard ceiling), and tells the
 dashboard when an attributed order is paid or cancelled.
@@ -21,9 +21,12 @@ confirms (i.e. Paystack reported the money in), the dashboard is notified, once,
 reliably. If the order is later cancelled, the dashboard is notified again so it
 can reverse the earning.
 
-**The affiliate's earning** is the markup portion of the untaxed total:
-`amount_untaxed × markup / (100 + markup)`. CyberVilla keeps the rest, exactly
-as if the markup had never been added.
+**The affiliate's earning** is the markup portion of the goods on the order:
+`goods × markup / (100 + markup)`, where *goods* is the untaxed subtotal of every
+line except delivery (the carrier prices delivery, so no markup was paid on it).
+CyberVilla keeps the rest, exactly as if the markup had never been added. An
+order that did not end up on the link's price list earns **nothing** — the
+buyer never paid the markup, so there is nothing to pass on.
 
 ## How pricing works (and why this way)
 
@@ -31,7 +34,27 @@ Each affiliate link owns exactly one **pricelist** with a single global rule:
 a `formula` rule with `price_discount = -markup` (a negative discount is Odoo's
 way of *adding* to a price). Once the cart is on that pricelist, Odoo's own
 website, cart, tax and order code do all the pricing — there is no custom price
-arithmetic to fight `website_sale`. The module never trusts a number from
+arithmetic to fight `website_sale`.
+
+How the visitor stays on that price list in Odoo 19, which recomputes it more
+often than 16 did:
+
+- `/r/<code>` (and `?ref=` on any page) writes Odoo's own session keys
+  `website_sale_current_pl` and `website_sale_selected_pl_id`, plus our own copy.
+  `ir.http._frontend_pre_dispatch` puts Odoo's keys back on every page if Odoo
+  dropped them (it does on sign-in, and hourly on `/shop`).
+- `sale.order._compute_pricelist_id` keeps an attributed draft order on the
+  link's list, so signing in or entering an address at checkout cannot reset it.
+- `website.get_pricelist_available` returns only the affiliate's list during an
+  affiliate visit. That hides the price-list menu (the theme's too) and refuses
+  `/shop/change_pricelist`, so a buyer cannot switch to public prices.
+- The list is named `Web price <id>`, never after the affiliate.
+
+Carts are attributed in `website._create_cart` and
+`website._get_and_cache_current_cart` (Odoo 19 removed `sale_get_order`); writes
+are skipped on read-only requests.
+
+The module never trusts a number from
 outside: the markup is validated (`@api.constrains`) and clamped to the ceiling
 when a link is created or updated.
 
@@ -131,7 +154,11 @@ Verify the signature exactly as the existing Paystack webhook does. Body:
   "amount_untaxed": 1859250.0,
   "affiliate_earning": 9250.0,
   "customer_email": "buyer@example.com",
-  "confirmed_at": "2026-09-23 14:40:00"
+  "confirmed_at": "2026-09-23 14:40:00",
+  "lines": [
+    {"product_id": 14609, "product_tmpl_id": 15028, "name": "Redmi 15C", "quantity": 1,
+     "price_unit": 1859250.0, "price_subtotal": 1859250.0, "is_delivery": false}
+  ]
 }
 ```
 
@@ -143,29 +170,19 @@ retried after a timeout that actually succeeded.
 
 ---
 
-## Verify on staging (in priority order)
+## Verify on staging
 
-1. **Pricelist applies and sticks.** With advanced rules on, click `/r/<code>`,
-   add to cart, and confirm the price is `base × (1 + markup%)`. Then log in,
-   change quantities, and re-check — the affiliate pricelist must survive cart
-   updates and login. If Odoo resets `pricelist_id` from the partner, the fix is
-   in `sale.order._apply_affiliate_link` / `website.sale_get_order`; this is the
-   most version-sensitive part.
-2. **`ir_http._dispatch` signature.** `models/ir_http.py` captures `?ref=` on any
-   page. Confirm the `_dispatch(cls, endpoint)` signature matches this exact
-   16.0 point release — a wrong signature there affects every request. If you
-   only want `/r/<code>` capture, you can delete `models/ir_http.py` and its
-   import; `/r/<code>` does not depend on it.
-3. **Vendor-owned products.** This store distinguishes vendor vs own stock
-   (`cybervilla_product_ownership`). Decide whose margin an affiliate's markup
-   comes from before letting affiliates mark up vendor products. The module adds
-   the markup **on top** of the shown price (the buyer pays it), so it does not
-   touch CyberVilla's or the vendor's margin — but confirm that is the intended
-   commercial rule.
-4. **Earning vs tax.** Earning is computed on `amount_untaxed`. Confirm that
-   matches how you want to pay affiliates if the store prices tax-inclusive.
-5. **Refunds.** Cancellation is covered. If you also refund via credit note
-   without cancelling the sale order, add that signal (out of scope here).
+1. **The price list sticks.** Open `/r/<code>`, add to cart, sign in, enter an
+   address, pay. The price must stay `list × (1 + markup%)` at every step, and no
+   price-list menu may appear.
+2. **Earning.** The order's *Affiliate earning* equals the markup on the goods,
+   with delivery left out.
+3. **Notification.** Scheduled jobs are off on the sandbox
+   (`max_cron_threads = 0`), so run `env['cybervilla.affiliate.webhook']._cron_dispatch()`
+   from `odoo-bin shell` and check the dashboard recorded the order.
+4. **Vendor-owned products.** The marketplace distinguishes vendor and own stock.
+   The markup is added on top of the shown price (the buyer pays it), so neither
+   margin changes — confirm that is the intended commercial rule.
 
 ## Security / the integration user
 
@@ -183,11 +200,12 @@ cybervilla_affiliate/
 ├── models/
 │   ├── affiliate.py               # cybervilla.affiliate (+ upsert)
 │   ├── affiliate_link.py          # link + its pricelist (+ upsert, cap)
+│   ├── product_pricelist.py       # keeps affiliate lists from being anyone's default
 │   ├── affiliate_click.py         # thin click record
 │   ├── affiliate_webhook.py       # signed, queued, retried delivery
 │   ├── sale_order.py              # attribution, earning, paid/cancel hooks
-│   ├── ir_http.py                 # ?ref= capture (see staging note 2)
-│   ├── website.py                 # attach link to the cart
+│   ├── ir_http.py                 # ?ref= capture, keeps the price list on
+│   ├── website.py                 # attach link to the cart, lock the price list
 │   └── res_config_settings.py     # the three settings
 ├── data/                          # cron + default ceiling
 ├── security/                      # manager group + access rules

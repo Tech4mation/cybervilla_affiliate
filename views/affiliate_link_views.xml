@@ -2,10 +2,10 @@
 <odoo>
 
     <record id="view_affiliate_link_tree" model="ir.ui.view">
-        <field name="name">cybervilla.affiliate.link.tree</field>
+        <field name="name">cybervilla.affiliate.link.list</field>
         <field name="model">cybervilla.affiliate.link</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="code"/>
                 <field name="affiliate_id"/>
                 <field name="label"/>
@@ -13,7 +13,7 @@
                 <field name="product_tmpl_id"/>
                 <field name="click_count"/>
                 <field name="active"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -52,7 +52,7 @@
     <record id="action_affiliate_link" model="ir.actions.act_window">
         <field name="name">Affiliate Links</field>
         <field name="res_model">cybervilla.affiliate.link</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
     </record>
 
 </odoo>
