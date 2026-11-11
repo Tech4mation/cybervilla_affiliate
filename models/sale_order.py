@@ -31,25 +31,54 @@ class SaleOrder(models.Model):
     affiliate_earning = fields.Monetary(
         string="Affiliate earning", compute="_compute_affiliate_earning",
         store=True, currency_field="currency_id",
-        help="What the affiliate keeps: the part of the untaxed total that is "
-             "their markup, above CyberVilla's own price.",
+        help="What the affiliate keeps: the part of the goods total (untaxed, "
+             "delivery excluded) that is their markup, above CyberVilla's own "
+             "price. Zero if the order was not charged at the link's price list.",
     )
     affiliate_notified = fields.Boolean(
         default=False, copy=False,
         help="Whether the paid-order webhook has been queued for the dashboard.",
     )
 
-    @api.depends("amount_untaxed", "affiliate_markup_percent")
+    @api.depends(
+        "order_line.price_subtotal", "order_line.is_delivery", "order_line.display_type",
+        "affiliate_markup_percent", "pricelist_id", "affiliate_link_id.pricelist_id",
+    )
     def _compute_affiliate_earning(self):
         for order in self:
             markup = order.affiliate_markup_percent or 0.0
-            if markup <= 0:
+            link_pricelist = order.affiliate_link_id.pricelist_id
+            # Only an order the buyer actually paid the markup on earns it. If
+            # the order ended up on any other price list, CyberVilla never
+            # collected the markup and must not pay it out.
+            if markup <= 0 or not link_pricelist or order.pricelist_id != link_pricelist:
                 order.affiliate_earning = 0.0
                 continue
-            # The untaxed total already includes the markup, so the affiliate's
-            # share is markup / (100 + markup) of it. CyberVilla's own take is
-            # the rest.
-            order.affiliate_earning = order.amount_untaxed * markup / (100.0 + markup)
+            # Delivery is priced by the carrier, not the price list, so the
+            # buyer paid no markup on it. Leave it out of the base.
+            goods = sum(
+                line.price_subtotal for line in order.order_line
+                if not line.display_type and not line.is_delivery
+            )
+            # The goods subtotal already includes the markup, so the
+            # affiliate's share is markup / (100 + markup) of it. CyberVilla's
+            # own take is the rest.
+            order.affiliate_earning = goods * markup / (100.0 + markup)
+
+    @api.depends("affiliate_link_id")
+    def _compute_pricelist_id(self):
+        """An attributed cart stays on its affiliate's price list.
+
+        Odoo recomputes an order's price list from the customer whenever the
+        customer changes — signing in, or entering an address at checkout —
+        and that would quietly drop the cart back to public prices mid-way
+        through the purchase. Confirmed orders are left alone, as Odoo does.
+        """
+        super()._compute_pricelist_id()
+        for order in self:
+            pricelist = order.affiliate_link_id.pricelist_id
+            if order.state == "draft" and pricelist:
+                order.pricelist_id = pricelist
 
     # ------------------------------------------------------------------ #
     # Attribution: attach the link when the cart first carries the code
@@ -64,17 +93,19 @@ class SaleOrder(models.Model):
         self.ensure_one()
         if not link or self.affiliate_link_id:
             return
-        vals = {
+        pricelist_before = self.pricelist_id
+        # Setting the link recomputes the price list (see
+        # `_compute_pricelist_id`), so the order lands on the markup here.
+        self.write({
             "affiliate_link_id": link.id,
             "affiliate_markup_percent": link.markup_percent,
-        }
+        })
         if link.pricelist_id and self.pricelist_id != link.pricelist_id:
-            vals["pricelist_id"] = link.pricelist_id.id
-        self.write(vals)
+            self.pricelist_id = link.pricelist_id
         # Re-price existing lines onto the new pricelist. New carts have none
         # yet; a cart that already held items gets brought onto the markup.
-        if vals.get("pricelist_id") and self.order_line:
-            self.action_update_prices()
+        if self.pricelist_id != pricelist_before and self.order_line:
+            self._recompute_prices()
 
     # ------------------------------------------------------------------ #
     # Notify the backend once the order is confirmed and paid
@@ -128,6 +159,10 @@ class SaleOrder(models.Model):
                     "quantity": line.product_uom_qty,
                     "price_unit": line.price_unit,
                     "price_subtotal": line.price_subtotal,
+                    # The shipping charge is an ordinary product line, so the
+                    # backend needs telling which one it is; otherwise any
+                    # percentage paid "on the order" also pays on delivery.
+                    "is_delivery": bool(line.is_delivery),
                 })
         except Exception:
             _logger.exception(

@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import Command, api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -62,11 +62,14 @@ class CybervillaAffiliateLink(models.Model):
     click_ids = fields.One2many("cybervilla.affiliate.click", "link_id", string="Clicks")
     click_count = fields.Integer(compute="_compute_click_count")
 
-    _sql_constraints = [
-        ("code_uniq", "unique(code)", "This affiliate code is already in use."),
-        ("backend_ref_uniq", "unique(backend_ref)",
-         "A link with this dashboard id already exists."),
-    ]
+    # Odoo 19 ignores `_sql_constraints`; without these two a code could be
+    # handed out twice and a sale credited to the wrong person.
+    _code_uniq = models.Constraint(
+        "UNIQUE(code)", "This affiliate code is already in use.",
+    )
+    _backend_ref_uniq = models.Constraint(
+        "UNIQUE(backend_ref)", "A link with this dashboard id already exists.",
+    )
 
     def _compute_click_count(self):
         for link in self:
@@ -89,10 +92,11 @@ class CybervillaAffiliateLink(models.Model):
     # ------------------------------------------------------------------ #
     def _pricelist_values(self):
         self.ensure_one()
-        currency = self.env.company.currency_id
+        company = self.env.company
         # A formula rule with a *negative* discount is Odoo's way of adding to
         # a price rather than taking off it: new = list * (1 - discount/100),
-        # so discount = -markup gives list * (1 + markup/100).
+        # so discount = -markup gives list * (1 + markup/100). Odoo 19 still
+        # prices `list_price`-based formula rules from `price_discount`.
         item = {
             "applied_on": "3_global",
             "compute_price": "formula",
@@ -100,10 +104,24 @@ class CybervillaAffiliateLink(models.Model):
             "price_discount": -self.markup_percent,
             "price_surcharge": 0.0,
         }
+        # Pinned to the shop's website explicitly: a pricelist with no website
+        # that is not selectable is a back-office list, and the shop silently
+        # refuses to use it.
+        website = self.env["website"].sudo().search(
+            [("company_id", "in", [False, company.id])], limit=1,
+        )
         return {
-            "name": "Affiliate %s (%s)" % (self.code, self.affiliate_id.name or ""),
-            "currency_id": currency.id,
-            "item_ids": [(5, 0, 0), (0, 0, item)],
+            # Deliberately says nothing about who the affiliate is. The list is
+            # never offered to the buyer, but its name can surface on screens
+            # we do not control, and the affiliate's name is not the buyer's
+            # business.
+            "name": "Web price %s" % (self.backend_ref or self.id),
+            "currency_id": company.currency_id.id,
+            "website_id": website.id or False,
+            "selectable": False,
+            # Keeps it from ever being anyone's default; see product_pricelist.py.
+            "is_cybervilla_affiliate": True,
+            "item_ids": [Command.clear(), Command.create(item)],
         }
 
     def _sync_pricelist(self):

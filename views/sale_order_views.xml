@@ -11,13 +11,13 @@
             <field name="client_order_ref" position="after">
                 <field name="affiliate_link_id" invisible="1"/>
                 <field name="affiliate_code" readonly="1"
-                       attrs="{'invisible': [('affiliate_code', '=', False)]}"/>
+                       invisible="not affiliate_code"/>
                 <field name="affiliate_id" readonly="1"
-                       attrs="{'invisible': [('affiliate_id', '=', False)]}"/>
+                       invisible="not affiliate_id"/>
                 <field name="affiliate_markup_percent" readonly="1"
-                       attrs="{'invisible': [('affiliate_link_id', '=', False)]}"/>
+                       invisible="not affiliate_link_id"/>
                 <field name="affiliate_earning" readonly="1"
-                       attrs="{'invisible': [('affiliate_link_id', '=', False)]}"/>
+                       invisible="not affiliate_link_id"/>
             </field>
         </field>
     </record>

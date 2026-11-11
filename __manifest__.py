@@ -1,6 +1,6 @@
 {
     "name": "CyberVilla Affiliate",
-    "version": "16.0.1.0.0",
+    "version": "19.0.1.0.0",
     "summary": "Affiliate attribution and capped markup pricing on the CyberVilla webshop",
     "description": """
 CyberVilla Affiliate
@@ -30,7 +30,8 @@ What it deliberately does NOT do
     "website": "https://www.cybervilla.io",
     "category": "Website/eCommerce",
     "license": "LGPL-3",
-    # website_sale pulls in sale, account, payment, website and stock.
+    # website_sale pulls in sale, account, payment, website, stock and delivery
+    # (delivery is what marks an order line as the shipping charge).
     "depends": ["website_sale", "sale_management"],
     "external_dependencies": {"python": ["requests"]},
     "data": [
